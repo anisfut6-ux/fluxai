@@ -1,0 +1,18 @@
+[build]
+  functions = "netlify/functions"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+
+[[redirects]]
+  from = "/api/anthropic"
+  to = "/.netlify/functions/anthropic"
+  status = 200
+
+[[redirects]]
+  from = "/api/fal/*"
+  to = "/.netlify/functions/fal"
+  status = 200
