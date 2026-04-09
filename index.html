@@ -689,7 +689,7 @@ const PROXY = (() => {
   const isHosted  = isNetlify || (!isLocal && location.protocol === 'https:');
 
   // ⚙️ URL Railway — mets à jour après le premier deploy Railway
-  const RAILWAY_URL = 'https://fluxai-proxy.up.railway.app';
+  const RAILWAY_URL = 'https://fluxai-production.up.railway.app';
 
   return {
     anthropic:  isLocal  ? 'http://localhost:3000/anthropic'
@@ -699,7 +699,7 @@ const PROXY = (() => {
               : isHosted ? '/api/fal'
               :            'https://fal.run',
     gptImage:   isLocal  ? 'http://localhost:3001/api/gpt-image'
-              :            '/api/gpt-image',  // Netlify function → Railway
+              :            '/api/gpt-image',  // via Netlify function → Railway
     active:  isLocal || isHosted,
     mode:    isLocal ? 'local-proxy' : isHosted ? 'netlify-functions' : 'direct',
   };
@@ -1620,17 +1620,28 @@ async function genOneGPTImage(p) {
   const proxyUrl = PROXY.gptImage;
   if (!proxyUrl) throw new Error('Railway URL non configurée');
 
+  // Build payload — send imageUrl if URL, base64 if uploaded file
+  const imgData = IMG.dataUrl || document.getElementById('img-url').value.trim();
+  const payload = {
+    prompt: p.prompt,
+    size: '1024x1024',
+    quality: 'high',
+  };
+  if (imgData) {
+    if (imgData.startsWith('http')) {
+      payload.imageUrl = imgData; // Railway fetches server-side
+    } else {
+      payload.image = imgData;    // base64
+    }
+  }
+
   const res = await fetch(proxyUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ' + openaiKey,
     },
-    body: JSON.stringify({
-      prompt: p.prompt,
-      size: '1024x1024',
-      quality: 'standard',
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
