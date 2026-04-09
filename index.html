@@ -689,8 +689,8 @@ const PROXY = (() => {
   const isHosted  = isNetlify || (!isLocal && location.protocol === 'https:');
 
   // ⚙️ URL Railway — mets à jour après le premier deploy Railway
-  const RAILWAY_URL = 'https://fluxai-proxy.up.railway.app';
-
+const RAILWAY_URL = 'https://fluxai-production.up.railway.app';
+  
   return {
     anthropic:  isLocal  ? 'http://localhost:3000/anthropic'
               : isHosted ? '/api/anthropic'
