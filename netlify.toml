@@ -12,3 +12,9 @@
   to = "/.netlify/functions/fal"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/api/gpt-image"
+  to = "/.netlify/functions/gpt-image"
+  status = 200
+  force = true
