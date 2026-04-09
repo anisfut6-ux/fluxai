@@ -584,7 +584,7 @@ hr.div{border:none;border-top:1px solid var(--b1);margin:12px 0}
       <div class="ptitle" style="margin-top:4px">API fal.ai</div>
       <div class="fg">
         <div class="apiwrap"><input class="fi" id="fal-key" type="password" placeholder="fal_key_…" style="font-family:'DM Mono',monospace;font-size:12px;padding-right:65px"><span class="avis" onclick="togFalVis()">Afficher</span></div>
-        <div style="font-size:11px;color:var(--mu);margin-top:4px">Compte sur <a href="https://fal.ai" style="color:var(--acc)" target="_blank">fal.ai</a> — gratuit pour tester</div>
+        <div style="font-size:11px;color:var(--mu);margin-top:4px">Clé depuis <a href="https://platform.openai.com/api-keys" style="color:var(--acc)" target="_blank">platform.openai.com</a></div>
       </div>
 
       <div class="fg">
@@ -639,9 +639,8 @@ hr.div{border:none;border-top:1px solid var(--b1);margin:12px 0}
         <div class="ch">Répartition par image</div>
         <div class="cs">Meilleur outil pour chaque besoin</div>
         <div style="font-size:11px;line-height:2;color:var(--mu)">
-          <div><span style="color:var(--acc)">1-2</span> <span style="color:var(--txt)">Flux Kontext Pro</span> — modifie ton image</div>
-          <div><span style="color:var(--acc)">3-4-5</span> <span style="color:var(--txt)">Kontext → Ideogram Remix</span></div>
-          <div style="margin-top:5px;color:var(--mu2);font-size:10px">Étape 1 : produit sur fond beige<br>Étape 2 : ajout texte/callouts lisibles</div>
+          <div><span style="color:var(--acc)">1-5</span> <span style="color:var(--txt)">GPT Image 1.5</span> — un seul modèle</div>
+          <div style="margin-top:5px;color:var(--mu2);font-size:10px">Prend ton image en input<br>Modifie fond + ajoute texte lisible<br>Meilleur rendu texte du marché</div>
         </div>
         <hr class="div" style="margin:10px 0">
         <div style="font-size:11px;color:var(--mu);display:grid;grid-template-columns:1fr auto;gap:3px 12px">
@@ -1450,11 +1449,10 @@ function sl(ms){return new Promise(r=>setTimeout(r,ms));}
 
 
 // ============================================================
-// IMAGE MODULE — fal.ai only, 5 images, 1024px min
+// IMAGE MODULE — GPT Image 1.5, 5 images, pipeline Amazon
 // ============================================================
 
 const IMG = { file:null, dataUrl:null, specs:null, results:[null,null,null,null,null], generating:false };
-
 const SLOT_LABELS = ['Fond blanc punchy','Lifestyle fond blanc','Infographie specs','Infographie bénéfices','Usage & occasions'];
 
 // --- File handling ---
@@ -1467,6 +1465,7 @@ function loadImgFile(evt) {
 }
 function previewFromUrl(url) {
   if(!url || !url.startsWith('http')) return;
+  // For external URLs, we'll use them directly (GPT Image accepts URLs)
   IMG.dataUrl = url; showImgPrev(url);
 }
 function showImgPrev(src) {
@@ -1476,7 +1475,6 @@ function showImgPrev(src) {
   document.getElementById('img-dropz').style.opacity = '.4';
 }
 
-// Drag & drop on dropzone
 document.addEventListener('DOMContentLoaded', () => {
   const dz = document.getElementById('img-dropz');
   if(!dz) return;
@@ -1504,43 +1502,40 @@ async function extractSpecs() {
   const cat     = document.getElementById('img-cat').value.trim();
   const price   = document.getElementById('img-price').value.trim();
   const dir     = document.getElementById('img-dir').value.trim();
-
   if(!name && !desc) throw new Error('Renseigne au minimum le nom et la description');
   if(!S.apiKey || !S.apiKey.startsWith('sk-')) throw new Error('Clé Claude manquante (Réglages)');
 
-  const prompt = `Tu es expert en merchandising Amazon et infographie e-commerce.
-Analyse ce produit et extrais les données pour créer 5 images secondaires Amazon.
-
-PRODUIT :
-Nom : ${name}
-Catégorie : ${cat||'Non précisée'}
-Prix : ${price ? price+'€' : 'Non précisé'}
-${desc ? 'Description :\n'+desc.substring(0,1500) : ''}
-${bullets ? 'Bullets :\n'+bullets.substring(0,400) : ''}
-${dir ? 'Directives : '+dir : ''}
-
-Réponds UNIQUEMENT avec ce JSON, sans texte autour :
+  const prompt = `Tu es expert en merchandising Amazon.
+Analyse ce produit et retourne UNIQUEMENT ce JSON :
 {
   "family": "pyro|evjf|mariage|ballon|halloween|noel|anniversaire|vaisselle|lumiere|fete",
   "product_short": "Nom court max 6 mots",
   "specs": [
     {"label": "Quantité", "value": "Lot de 6"},
-    {"label": "Taille", "value": "45 cm"},
-    {"label": "Matière", "value": "Aluminium"},
-    {"label": "Compatibilité", "value": "Compatible hélium"},
-    {"label": "Norme", "value": "Catégorie F1"}
+    {"label": "Durée", "value": "60 secondes"},
+    {"label": "Portée", "value": "8 mètres"},
+    {"label": "Volume", "value": "60 à 90 m³"},
+    {"label": "Allumage", "value": "Goupille"}
   ],
   "benefits": [
-    {"text": "Prêt en 30 secondes", "icon": "⚡"},
+    {"text": "Activation instantanée", "icon": "⚡"},
     {"text": "Livraison 24-48h", "icon": "🚀"},
     {"text": "Marque française", "icon": "🇫🇷"}
   ],
   "occasions": ["Mariage", "Anniversaire", "EVJF"],
-  "color_primary": "#hexcode couleur principale du produit ou de la catégorie",
-  "lifestyle_scene": "Description courte de l'ambiance idéale pour ce produit (lieu, moment, couleurs)",
-  "usage_scene": "Contexte d'usage concret : qui l'utilise, comment, dans quelle situation"
+  "color_primary": "#cc0000",
+  "lifestyle_scene": "outdoor garden party with people celebrating",
+  "usage_scene": "hand holding the product at an outdoor event"
 }
-Extrais UNIQUEMENT les specs présentes dans le texte — max 5 specs, 3 bénéfices, 3 occasions.`;
+
+PRODUIT :
+Nom : ${name}
+Catégorie : ${cat||''}
+Prix : ${price ? price+'€' : ''}
+${desc ? 'Description : '+desc.substring(0,1200) : ''}
+${bullets ? 'Bullets : '+bullets.substring(0,400) : ''}
+${dir ? 'Directives : '+dir : ''}
+Extrais UNIQUEMENT les specs présentes dans le texte.`;
 
   const res = await fetch(`${PROXY.anthropic}/v1/messages`, {
     method:'POST',
@@ -1552,169 +1547,145 @@ Extrais UNIQUEMENT les specs présentes dans le texte — max 5 specs, 3 bénéf
   return parseJ(data.content.map(c=>c.text||'').join('').trim());
 }
 
-// --- STEP 2: Build prompts ---
+// --- STEP 2: Build 5 GPT Image prompts ---
 function buildPrompts(s, dir) {
   const bg   = document.getElementById('cfg-bg-hex').value || '#f4ebd1';
-  const prod = s.product_short || document.getElementById('img-name').value.trim().substring(0,40);
-  const specCallouts = (s.specs||[]).slice(0,4).map(x=>`"${x.value}" — ${x.label}`).join(' | ');
-  const benefitCallouts = (s.benefits||[]).map(b=>`${b.icon} ${b.text}`).join(' | ');
-  const occasionsStr = (s.occasions||[]).join(', ') || 'Anniversaire, Mariage, EVJF';
+  const prod = s.product_short || document.getElementById('img-name').value.trim().substring(0,50);
+  const specsText = (s.specs||[]).slice(0,5).map(x=>`${x.label}: ${x.value}`).join(', ');
+  const benefitsText = (s.benefits||[]).map(b=>`${b.icon} ${b.text}`).join(' | ');
+  const occasions = (s.occasions||[]).join(', ') || 'Anniversaire, Mariage, EVJF';
   const color = s.color_primary || '#cc3300';
+  const lifestyle = s.lifestyle_scene || 'festive outdoor event with people celebrating';
+  const usage = s.usage_scene || 'person using the product at an event';
+  const dirNote = dir ? ` Additional instruction: ${dir}` : '';
 
   return [
-    // 1 — Fond blanc amélioré (Kontext Pro)
+    // 1 — Fond blanc pur
     {
       label: 'Fond blanc punchy',
-      step: 'kontext-photo',
-      prompt: `Replace the background with pure white RGB 255,255,255. Improve studio lighting with soft dramatic shadows beneath the product. Keep the exact same product, same angle, same details. Product fills 85% of frame. No text, no props. Professional Amazon main image.${dir?' '+dir:''}`
+      useImage: true,
+      prompt: `This is a product photo editing task. Keep the exact product from the image, do not change it at all. Replace ONLY the background with pure white (RGB 255,255,255). Improve the studio lighting: add soft professional shadows beneath the product. The product must remain identical, centered, filling 85% of the frame. Result: clean Amazon main product image, no text, no props.${dirNote}`
     },
-    // 2 — Lifestyle fond blanc (Kontext Pro)
+    // 2 — Lifestyle
     {
       label: 'Lifestyle fond blanc',
-      step: 'kontext-photo',
-      prompt: `Keep the exact same product unchanged. Add a ${s.lifestyle_scene||'festive party atmosphere with warm soft bokeh lights'} in the background. Keep background bright and airy. Product remains centered and clearly visible. Professional lifestyle photography. No text overlay.${dir?' '+dir:''}`
+      useImage: true,
+      prompt: `Keep the exact same product from the image unchanged. Change the background to show: ${lifestyle}. The background should be bright, airy and inviting. Keep the product clearly visible and centered in the foreground. Natural warm lighting. Professional lifestyle e-commerce photography style. No text overlay.${dirNote}`
     },
-    // 3 — Infographie specs (Kontext Pro → fond beige, puis Ideogram Remix)
+    // 3 — Infographie specs
     {
       label: 'Infographie specs',
-      step: 'kontext-then-ideogram',
-      // Step A: Kontext puts product on clean beige background
-      promptA: `Change the background to solid flat beige color ${bg}. Keep the exact same product perfectly centered. Clean product shot on colored background, no shadows, no text.`,
-      // Step B: Ideogram Remix adds callouts around the product image
-      promptB: `Amazon product infographic with callout arrows. Keep the product from the image exactly as is in the center. Add white rounded callout lines pointing to the product with bold French text labels: ${specCallouts}. Clean modern design, large readable sans-serif font, professional e-commerce layout. Beige background ${bg}.${dir?' '+dir:''}`
+      useImage: true,
+      prompt: `Product infographic for Amazon. Keep the exact product from the image in the center. Change background to solid beige ${bg}. Add clean white callout arrows pointing to the product with these French text labels in bold dark typography: ${specsText}. Large readable sans-serif font minimum 28px. Professional Amazon secondary image layout. Clean minimal design.${dirNote}`
     },
-    // 4 — Infographie bénéfices (Kontext Pro → fond beige, puis Ideogram Remix)
+    // 4 — Infographie bénéfices
     {
       label: 'Infographie bénéfices',
-      step: 'kontext-then-ideogram',
-      promptA: `Change the background to solid flat beige color ${bg}. Keep the exact same product perfectly centered. Clean product shot on beige, no text.`,
-      promptB: `Amazon product secondary image. Keep the product from the image centered. Add 3 benefit badge boxes around the product in French: ${benefitCallouts}. Bold large typography, accent color ${color}, professional marketing layout, high readability. Beige background ${bg}.${dir?' '+dir:''}`
+      useImage: true,
+      prompt: `Product benefit infographic for Amazon. Keep the exact product from the image centered. Change background to solid beige ${bg}. Add 3 benefit badge boxes arranged around the product with these French texts in bold: ${benefitsText}. Use ${color} as accent color for badges. Large readable typography. Clean professional e-commerce marketing layout.${dirNote}`
     },
-    // 5 — Usage & occasions (Kontext Pro → fond beige, puis Ideogram Remix)
+    // 5 — Usage & occasions
     {
       label: 'Usage & occasions',
-      step: 'kontext-then-ideogram',
-      promptA: `Change the background to solid flat beige color ${bg}. Keep the exact same product perfectly centered. Clean product shot on beige.`,
-      promptB: `Amazon lifestyle infographic. Keep the product from the image centered. Add occasion labels in French around the product: ${occasionsStr}. Include small festive icons. Bold readable French text, warm color scheme ${color}, professional e-commerce style. Beige background ${bg}.${dir?' '+dir:''}`
+      useImage: true,
+      prompt: `Amazon product usage infographic. Keep the exact product from the image centered. Change background to solid beige ${bg}. Add occasion labels in French around the product: ${occasions}. Show ${usage}. Add small decorative icons. Bold readable French text. Warm festive color scheme with ${color} accent. Professional e-commerce layout.${dirNote}`
     }
   ];
 }
 
-// --- STEP 3: Generate one image via fal.ai ---
-async function genOneFalImage(promptConfig, sourceImageUrl) {
-  const falKey = document.getElementById('fal-key').value.trim();
-  if (!falKey) throw new Error('Clé fal.ai manquante');
-  if (!sourceImageUrl) throw new Error('Image source manquante — uploade ou colle une URL');
+// --- STEP 3: Call GPT Image API ---
+async function genOneGPTImage(p, imageData) {
+  const openaiKey = document.getElementById('fal-key').value.trim();
+  if (!openaiKey) throw new Error('Clé OpenAI manquante — colle-la dans le champ API');
 
-  if (promptConfig.step === 'kontext-photo') {
-    // Direct Flux Kontext Pro call
-    return await callFal('fal-ai/flux-pro/kontext', {
-      prompt: promptConfig.prompt,
-      image_url: sourceImageUrl,
-      num_images: 1,
-      output_format: 'jpeg',
-      guidance_scale: 2.5,
-      num_inference_steps: 28,
-    }, falKey);
-
-  } else if (promptConfig.step === 'kontext-then-ideogram') {
-    // Step A: Kontext Pro — place product on clean beige background
-    const beigeBgUrl = await callFal('fal-ai/flux-pro/kontext', {
-      prompt: promptConfig.promptA,
-      image_url: sourceImageUrl,
-      num_images: 1,
-      output_format: 'jpeg',
-      guidance_scale: 2.5,
-      num_inference_steps: 20,
-    }, falKey);
-
-    // Step B: Ideogram v2 Remix — add text/callouts around the product
-    return await callFal('fal-ai/ideogram/v2/remix', {
-      prompt: promptConfig.promptB,
-      image_url: beigeBgUrl,
-      image_weight: 70,        // keep product prominent
-      style_type: 'DESIGN',
-      magic_prompt_option: 'OFF', // use our prompt as-is
-      num_images: 1,
-    }, falKey);
-  }
-
-  throw new Error('Type de génération inconnu: ' + promptConfig.step);
-}
-
-// --- fal.ai API caller ---
-async function callFal(model, body, falKey) {
+  // Determine proxy URL
   const proxyUrl = PROXY.mode === 'netlify-functions'
-    ? `${PROXY.fal}?model=${encodeURIComponent(model)}`
-    : `${PROXY.fal}/${model}`;
+    ? '/api/gpt-image'
+    : 'https://api.openai.com/v1/images/edits'; // direct won't work from browser but fallback
+
+  const body = {
+    prompt: p.prompt,
+    size: '1024x1024',
+    quality: 'high',
+  };
+
+  if (p.useImage && imageData) {
+    body.image = imageData; // base64 or URL — function handles both
+  }
 
   const res = await fetch(proxyUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Key ' + falKey },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + openaiKey,
+      'X-Endpoint': p.useImage && imageData ? 'edits' : 'generations',
+    },
     body: JSON.stringify(body),
   });
 
   if (!res.ok) {
     const d = await res.json().catch(() => ({}));
-    throw new Error(d.detail || d.message || d.error || `fal.ai ${model} HTTP ${res.status}`);
+    throw new Error(d.error?.message || d.error || `OpenAI HTTP ${res.status}`);
   }
 
   const data = await res.json();
-  if (data.images && data.images[0]) return data.images[0].url;
-  if (data.image && data.image.url) return data.image.url;
-  if (data.image_url) return data.image_url;
-  throw new Error('Réponse inattendue de ' + model);
+
+  // GPT Image returns b64_json or url
+  if (data.data && data.data[0]) {
+    if (data.data[0].url) return data.data[0].url;
+    if (data.data[0].b64_json) return 'data:image/png;base64,' + data.data[0].b64_json;
+  }
+  throw new Error('Réponse OpenAI inattendue');
 }
 
-
-// --- MAIN orchestration ---
+// --- MAIN ---
 async function startImageGen() {
   if(IMG.generating) return;
   const name = document.getElementById('img-name').value.trim();
   const desc = document.getElementById('img-desc').value.trim();
   if(!name && !desc) { alert('Renseigne au minimum le nom et la description'); return; }
 
+  const openaiKey = document.getElementById('fal-key').value.trim();
+  if (!openaiKey) { alert('Clé OpenAI manquante — colle-la dans le champ API fal.ai'); return; }
+
   IMG.generating = true;
   const btn = document.getElementById('btn-img-gen');
   btn.disabled = true;
   btn.innerHTML = '<span class="img-spin" style="width:12px;height:12px;border-width:2px;display:inline-block"></span> Génération…';
-
-  // Reset all slots to "generating"
   for(let i=0;i<5;i++) setSlotGen(i);
   document.getElementById('img-dl-all').style.display = 'none';
 
   try {
-    // Step 1: extract specs
-    imgLog('lin', 'Extraction des specs produit via Claude…');
+    imgLog('lin', 'Extraction des specs via Claude…');
     const specs = await extractSpecs();
     IMG.specs = specs;
     showSpecs(specs);
-    imgLog('lok', `Specs extraites — famille: ${specs.family} · ${specs.specs.length} specs`);
+    imgLog('lok', `Specs extraites — ${specs.specs.length} specs · famille: ${specs.family}`);
 
-    // Step 2: build prompts
     const dir = document.getElementById('img-dir').value.trim();
     const prompts = buildPrompts(specs, dir);
     showPromptsPrev(prompts);
 
-    // Step 3: generate sequentially
     const imageData = IMG.dataUrl || document.getElementById('img-url').value.trim();
-    if (!imageData) { throw new Error('Image source manquante — uploade une image ou colle une URL'); }
+    if (!imageData) throw new Error('Image source manquante — uploade ou colle une URL');
+
+    imgLog('lin', 'Lancement génération GPT Image 1.5…');
     let successCount = 0;
+
     for(let i=0;i<5;i++) {
       const p = prompts[i];
-      const modelStr = p.step==='kontext-photo'?'Kontext Pro':'Kontext→Ideogram';
-      imgLog('lin', `Image ${i+1}/5 — ${p.label} (${modelStr})…`);
+      imgLog('lin', `Image ${i+1}/5 — ${p.label}…`);
       try {
-        const url = await genOneFalImage(p, imageData);
+        const url = await genOneGPTImage(p, imageData);
         IMG.results[i] = url;
         setSlotResult(i, url);
         successCount++;
         imgLog('lok', `✓ Image ${i+1} — ${p.label}`);
       } catch(e) {
         setSlotErr(i, e.message);
-        imgLog('ler', `✗ Image ${i+1} : ${e.message.substring(0,70)}`);
+        imgLog('ler', `✗ Image ${i+1} : ${e.message.substring(0,80)}`);
       }
-      if(i < 4) await sl(600);
+      if(i < 4) await sl(1200); // GPT Image needs a bit more time between calls
     }
 
     if(successCount > 0) {
@@ -1734,13 +1705,10 @@ async function startImageGen() {
 
 // --- Slot rendering ---
 function setSlotGen(i) {
-  const s = document.getElementById('slot-'+i);
-  s.innerHTML = `<div class="img-slot-gen"><div class="img-spin"></div><div style="font-size:10px;color:var(--mu);margin-top:4px">${SLOT_LABELS[i]}</div></div>`;
+  document.getElementById('slot-'+i).innerHTML = `<div class="img-slot-gen"><div class="img-spin"></div><div style="font-size:10px;color:var(--mu);margin-top:4px">${SLOT_LABELS[i]}</div></div>`;
 }
-
 function setSlotResult(i, url) {
-  const s = document.getElementById('slot-'+i);
-  s.innerHTML = `
+  document.getElementById('slot-'+i).innerHTML = `
     <img src="${url}" alt="${SLOT_LABELS[i]}" style="width:100%;height:100%;object-fit:cover;display:block">
     <div class="img-slot-overlay">
       <button class="iso-btn" onclick="dlImg('${url}',${i})">⬇ Télécharger</button>
@@ -1748,44 +1716,27 @@ function setSlotResult(i, url) {
     </div>
     <div class="img-slot-lbl">${i+1} · ${SLOT_LABELS[i]}</div>`;
 }
-
 function setSlotErr(i, msg) {
-  const s = document.getElementById('slot-'+i);
-  s.innerHTML = `<div class="img-slot-placeholder"><div style="font-size:16px;color:var(--er);opacity:.7">✗</div><div style="font-size:9px;color:var(--er);text-align:center;padding:4px 6px">${(msg||'Erreur').substring(0,55)}</div><div class="isl-lbl">${SLOT_LABELS[i]}</div></div>`;
+  document.getElementById('slot-'+i).innerHTML = `<div class="img-slot-placeholder"><div style="font-size:16px;color:var(--er);opacity:.7">✗</div><div style="font-size:9px;color:var(--er);text-align:center;padding:4px 6px">${(msg||'Erreur').substring(0,60)}</div><div class="isl-lbl">${SLOT_LABELS[i]}</div></div>`;
 }
-
 function showSpecs(specs) {
   const block = document.getElementById('img-specs-block');
   const content = document.getElementById('img-specs-content');
-  const items = [
-    ...(specs.specs||[]).map(x => ({l:x.label, v:x.value})),
-    ...(specs.benefits||[]).map(b => ({l:'Bénéfice', v:b.icon+' '+b.text})),
-    ...(specs.occasions||[]).map(o => ({l:'Occasion', v:o}))
-  ];
-  content.innerHTML = items.map(x =>
-    `<div class="spec-tag"><span class="spec-tag-l">${x.l}</span><span class="spec-tag-v">${x.v}</span></div>`
-  ).join('');
+  const items = [...(specs.specs||[]).map(x=>({l:x.label,v:x.value})),...(specs.benefits||[]).map(b=>({l:'Bénéfice',v:b.icon+' '+b.text})),...(specs.occasions||[]).map(o=>({l:'Occasion',v:o}))];
+  content.innerHTML = items.map(x=>`<div class="spec-tag"><span class="spec-tag-l">${x.l}</span><span class="spec-tag-v">${x.v}</span></div>`).join('');
   block.style.display = 'block';
 }
-
 function showPromptsPrev(prompts) {
-  const stepLabel = s => s==='kontext-photo'?'Kontext Pro':s==='kontext-then-ideogram'?'Kontext+Ideogram':'–';
-  document.getElementById('prompts-preview').innerHTML = prompts.map((p,i) =>
-    `<div class="prompt-mini"><div class="pm-title">${i+1} · ${p.label} · ${stepLabel(p.step)}</div>${(p.prompt||p.promptA||'').substring(0,100)}…</div>`
+  document.getElementById('prompts-preview').innerHTML = prompts.map((p,i)=>
+    `<div class="prompt-mini"><div class="pm-title">${i+1} · ${p.label} · GPT Image 1.5</div>${p.prompt.substring(0,110)}…</div>`
   ).join('');
 }
-
 function dlImg(url, i) {
   const a = document.createElement('a');
-  a.href = url;
-  a.download = `amazon_img_${i+1}_${SLOT_LABELS[i].replace(/\s+/g,'_')}.jpg`;
+  a.href = url; a.download = `amazon_img_${i+1}_${SLOT_LABELS[i].replace(/\s+/g,'_')}.jpg`;
   a.target = '_blank'; a.click();
 }
-
-function downloadAll() {
-  IMG.results.forEach((url, i) => { if(url) { setTimeout(() => dlImg(url, i), i * 300); } });
-}
-
+function downloadAll() { IMG.results.forEach((url,i)=>{ if(url) setTimeout(()=>dlImg(url,i),i*300); }); }
 function imgLog(type, msg) { _log('img-log', type, msg); }
 
 </script>
